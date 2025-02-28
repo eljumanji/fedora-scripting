@@ -1,0 +1,276 @@
+#!/bin/bash
+
+# Working variables 
+DELAY=3
+
+# List of packages to install
+PACKAGES=(
+  "alacritty"
+  "neovim"
+  "cool-retro-term"
+  "keepassxc"
+  "flameshot"
+  "mpv"
+  "zsh"
+  "git"
+  "wget"
+  "btop"
+  "tldr"
+  "gnome-tweaks"
+  "firewall-config"
+  "pip"
+  "cowsay"
+  "7z"
+  "unrar"
+  "dconf-editor"
+  "nmap"
+  "adw-gtk3-theme"
+  "fira-code-fonts"
+  "rsms-inter-fonts"
+)
+
+# Base GNOME extensions
+GNOME_EXTENSIONS=(
+  "blur-my-shell@aunetx"
+  "dash-to-dock@micxgx.gmail.com"
+  "tiling-assistant@leleat-on-github"
+  "appindicatorsupport@rgcjonas.gmail.com"
+  "freon@UshakovVasilii_Github.yahoo.com"
+  "caffeine@patapon.info"
+)
+
+# GNOME bloat packages
+GNOME_BLOAT=(
+  "gnome-boxes"
+  "gnome-connections"
+  "gnome-contacts"
+  "gnome-weather"
+  "gnome-maps"
+  "rhythmbox"
+  "gnome-tour"
+)
+
+# GAME dnf packages
+GAME_PACKAGES=(
+  "steam"
+  "lutris"
+  "mangohud"
+  "goverlay"
+  "corectrl"
+)
+
+# Base flatpaks
+FLATPAKS=(
+  "com.discordapp.Discord"
+  "md.obsidian.Obsidian"
+  "net.ankiweb.Anki"
+  "org.localsend.localsend_app"
+  "io.missioncenter.MissionCenter"
+  "io.github.flattool.Warehouse"
+  "io.bassi.Amberol"
+  "org.gtk.Gtk3theme.adw-gtk3"
+  "org.gtk.Gtk3theme.adw-gtk3-dark"
+  "org.nickvision.tagger"
+)
+
+# Cool ass banner
+banner()
+{
+  echo -e ' 
+\e[1;34m
+     __ __    __           __     _            __    __
+   _/ // /_  / /___ ______/ /__  (_)___ ______/ /___/ /
+  / __/ __ \/ / __ `/ ___/ //_/ / / __ `/ ___/ //_/ __/
+ (_  ) /_/ / / /_/ / /__/ ,<   / / /_/ / /__/ ,< (_  ) 
+/  _/_.___/_/\__,_/\___/_/|_|_/ /\__,_/\___/_/|_/  _/  
+/_/                        /___/                /_/    
+
+\e[0m
+\033[1;92;5m.:-$.:-$.:-$.:-$\033[0m\e[1;92;3m~ Man I Love Fedora! ~\e[0m\033[1;92;5m.:-$.:-$.:-$.:-$\033[0m
+'
+}
+
+# Automate the install of pfetch
+pfetch_install() {
+  cd
+  git clone https://github.com/dylanaraps/pfetch.git
+  sudo install pfetch/pfetch /usr/local/bin/
+  rm -rfv pfetch
+}
+
+base_install() {
+  # Install base packages
+  echo "Installing packages..."
+  sudo dnf install -y "${PACKAGES[@]}"
+  
+  # Install flatpaks
+  flatpak install -y "${FLATPAKS[@]}"
+
+  # Install codecs and ffmpegthumbnailer
+  echo "Installing codecs..."
+  sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+  sudo dnf config-manager setopt fedora-cisco-openh264
+  sudo dnf swap ffmpeg-free ffmpeg --allowerasing
+  sudo dnf update @multimedia --setop="install_weak_deps=False" --exclude=PackageKit-gstreamer-plugin
+  sudo dnf group install Multimedia
+  sudo dnf install -y ffmpegthumbnailer 
+
+  # Install KVM and virt manager
+  echo "Installing KVM virtualization..."
+  sudo dnf group install --with-optional virtualization
+  sudo systemctl start libvirtd
+  sudo systemctl enable libvirtd
+  sudo usermod -a -G libvirt $(whoami)
+  sudo usermod -a -G kvm $(whoami)
+  
+  # Base fedora tweaks
+  tweaks
+}
+
+tweaks() {
+  # Modern fetch
+  pfetch_install
+
+  # Load ZSH with plugins
+  sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+  cd ~/.oh-my-zsh/custom/plugins
+  git clone https://github.com/zsh-users/zsh-autosuggestions.git
+  git clone https://github.com/zsh-users/zsh-syntax-highlighting.git
+  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
+  cd
+  
+  # Copy config files and zshrc
+  cat ~/bin/zshrc > ~/.zshrc
+  cp -rv ~/bin/nvim ~/.config/
+  zsh
+
+  # Clone alacritty themes and copy config
+  mkdir -p ~/.config/alacritty/themes                
+  git clone https://github.com/alacritty/alacritty-theme ~/.config/alacritty/themes
+  cp ~/bin/fedora_tweaks/alacritty.toml ~/.config/alacritty/
+
+  # Copy tmux config file
+  cp ~/bin/fedora_tweaks/tmux ~/.tmux.conf
+
+  # Set dark theme
+  gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3-dark' && gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+}
+
+gnome_works() {
+  # Copy flameshot wayland binary and set automount to false
+  sudo cp -v ~/bin/fedora_tweaks/bicflame /usr/local/bin/
+
+  # Load icons
+  mkdir .icons && cd 
+  echo "Loading icons..."
+  git clone https://github.com/bikass/kora.git
+  cp -r kora/kora/ ~/.icons/
+  rm -rf kora/ 
+  
+  # And cursor
+  #wget https://gitlab.com/-/project/6703061/uploads/71144f0c1abaed7824804bf23bad0a88/Hackneyed-Dark-0.9.3-right-handed.tar.bz2
+  #tar xvf Hackneyed-Dark-0.9.3-right-handed.tar.bz
+  #sudo cp -r Hackneyed-Dark/ /usr/share/icons/
+  #rm -r Hackneyed-Dark*
+
+  # Remove bloat
+  sudo dnf remove -y "${GNOME_BLOAT[@]}"
+  cd
+  clear
+  
+  # Load gnome extensions
+  flatpak install -y "com.mattjakeman.ExtensionManager"
+  for ext in "${GNOME_EXTENSIONS[@]}"; do   
+    load_extensions "$ext"
+  done
+
+  # Load dconf settings
+  dconf load / < ~/bin/fedora_tweaks/settings.dconf
+}
+
+load_extensions() {
+  # Variable for extension UUID
+  local uuid=$1
+
+  # 1. GNOME shell version
+  shell_version=$(gnome-shell --version | cut -d' ' -f3)
+
+  # 2. Fetch extension info (for the given shell version)
+  info_json=$(curl -sS "https://extensions.gnome.org/extension-info/?uuid=$uuid&shell_version=$shell_version")
+
+  # 3. Extract download url from the json with jq
+  download_url=$(echo $info_json | jq ".download_url" --raw-output)
+
+  # 4. Install and enable the extension
+  gnome-extensions install "https://extensions.gnome.org$download_url"
+}
+
+# Install programs and tweaks optimized for laptops
+laptop_tweaks() {
+  # Install battery optimizer gnome extension
+  load_extensions "Battery-Health-Charging@maniacx.github.com" 
+  chmod +x /home/$USER/.local/share/gnome-shell/extensions/Battery-Health-Charging@maniacx.github.com/tool/installer.sh
+}
+
+# Simple laptop prompt
+laptop_prompt() {
+  while true; do
+    read -p "Laptop install? y/n --> "
+    case "$REPLY" in
+      y|Y)    echo "Loading laptop components..."
+              sleep "$DELAY"
+              laptop_tweaks
+              return 0
+            ;;
+      n|N)    echo "Skipping laptop components..."
+              return 1
+            ;;
+    esac
+  done
+}
+
+# Install gaming packages
+gaming_time() {
+  while true; do
+    read -p "Install gaming packages? y/n --> "
+    case "$REPLY" in
+      y|Y)    echo "Loading gaming components..."
+              sleep "$DELAY"
+              sudo dnf install -y "${GAME_PACKAGES[@]}"
+              flatpak install -y com.usebottles.bottles
+              return 0
+            ;;
+      n|N)    echo "Skipping laptop components..."
+              return 1
+            ;;
+    esac
+  done
+}
+
+# Detect the package manager and install packages
+while true; do
+  banner
+  read -p "
+Remember to update and restart before proceeding!
+Do you wish to do a fresh install? y/n --> "
+  case "$REPLY" in
+    y|Y)    if command -v dnf > /dev/null; then
+              base_install
+              gnome_works
+              laptop_prompt
+              gaming_time
+            else
+              echo "Unsupported package manager. Please install packages manually."
+              exit 1
+            fi
+          echo "
+          Package installation complete.
+          Remember to restart in order to load gnome extensions and KVM modules."
+          sleep "$DELAY"
+          exit
+          ;;
+    n|N)    echo "Fresh install aborted."
+            exit
+          ;;
+  esac
+done
