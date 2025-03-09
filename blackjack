@@ -5,7 +5,6 @@ DELAY=3
 
 # List of packages to install
 PACKAGES=(
-  "alacritty"
   "neovim"
   "cool-retro-term"
   "keepassxc"
@@ -25,7 +24,6 @@ PACKAGES=(
   "dconf-editor"
   "nmap"
   "adw-gtk3-theme"
-  "fira-code-fonts"
   "rsms-inter-fonts"
 )
 
@@ -144,16 +142,18 @@ tweaks() {
   cp -rv ~/bin/nvim ~/.config/
   zsh
 
-  # Clone alacritty themes and copy config
-  mkdir -p ~/.config/alacritty/themes                
-  git clone https://github.com/alacritty/alacritty-theme ~/.config/alacritty/themes
-  cp ~/bin/fedora_tweaks/alacritty.toml ~/.config/alacritty/
-
-  # Copy tmux config file
-  cp ~/bin/fedora_tweaks/tmux ~/.tmux.conf
+  # Load MesloLGS font
+  mkdir -p ~/.local/share/fonts
+  cp -rv ~/bin/fedora_tweaks/meslo/* ~/.local/share/fonts
 
   # Set dark theme
   gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3-dark' && gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+
+  # Install zellij
+  wget https://github.com/zellij-org/zellij/releases/latest/download/zellij-x86_64-unknown-linux-musl.tar.gz
+  tar xvf zellij-x86_64-unknown-linux-musl.tar.gz
+  mv zellij ~/bin
+  rm zellij-x86_64-unknown-linux-musl.tar.gz
 }
 
 gnome_works() {
@@ -168,10 +168,10 @@ gnome_works() {
   rm -rf kora/ 
   
   # And cursor
-  #wget https://gitlab.com/-/project/6703061/uploads/71144f0c1abaed7824804bf23bad0a88/Hackneyed-Dark-0.9.3-right-handed.tar.bz2
-  #tar xvf Hackneyed-Dark-0.9.3-right-handed.tar.bz
-  #sudo cp -r Hackneyed-Dark/ /usr/share/icons/
-  #rm -r Hackneyed-Dark*
+  wget https://gitlab.com/-/project/6703061/uploads/71144f0c1abaed7824804bf23bad0a88/Hackneyed-Dark-0.9.3-right-handed.tar.bz2
+  tar xvf Hackneyed-Dark-0.9.3-right-handed.tar.bz2
+  sudo cp -r Hackneyed-Dark/ /usr/share/icons/
+  rm -r Hackneyed-Dark*
 
   # Remove bloat
   sudo dnf remove -y "${GNOME_BLOAT[@]}"
