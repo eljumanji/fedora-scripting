@@ -1,0 +1,105 @@
+#!/bin/bash
+
+DIR="/media/flatline-dix/ono-sendai"
+DELAY=3
+
+confirm() {
+clear
+echo -e "
+██     ██  █████  ██████  ███    ██ ██ ███    ██  ██████  ██ 
+██     ██ ██   ██ ██   ██ ████   ██ ██ ████   ██ ██       ██ 
+██  █  ██ ███████ ██████  ██ ██  ██ ██ ██ ██  ██ ██   ███ ██ 
+██ ███ ██ ██   ██ ██   ██ ██  ██ ██ ██ ██  ██ ██ ██    ██    
+ ███ ███  ██   ██ ██   ██ ██   ████ ██ ██   ████  ██████  ██ 
+------------------------------------------------------------
+rsync is a potentially destructive program.
+Make sure you're picking the right choice before proceeding.
+
+Your current selection is: \e[31m\""$SELECTOR"\"\e[0m
+"
+read -p "Do you wish to continue? y/n --> "
+case "$REPLY" in
+
+  y|Y)  $1 && finish
+      ;;
+
+  n|N)  echo -n "Operation cancelled..." 
+        sleep "$DELAY"
+        clear
+      ;;
+esac
+}
+
+rsync_home() {
+  rsync -rauv --delete --progress --include='.ssh' --exclude=".[!.]*" --exclude='kvm' --exclude='Games' ~/ "$DIR"/
+}
+
+rsync_vm() {
+  rsync -rauv --delete ~/kvm "$DIR"/
+}
+
+rsync_all() {
+  rsync -rauv --delete --progress --include='.ssh/' --exclude=".[!.]*" --exclude='Games' ~/ "$DIR"/
+}
+
+finish()
+{
+echo -n "Backup finished"
+sleep "$DELAY"
+date +"%a %d/%m/%Y - %r" > $DIR/backup_log
+clear
+}
+
+banner()
+{
+echo -e '
+\e[1;32m
+  █████▒██▓    ▄▄▄     ▄▄▄█████▓ ██▓     ██▓ ███▄    █ ▓█████ 
+▓██   ▒▓██▒   ▒████▄   ▓  ██▒ ▓▒▓██▒    ▓██▒ ██ ▀█   █ ▓█   ▀ 
+▒████ ░▒██░   ▒██  ▀█▄ ▒ ▓██░ ▒░▒██░    ▒██▒▓██  ▀█ ██▒▒███   
+░▓█▒  ░▒██░   ░██▄▄▄▄██░ ▓██▓ ░ ▒██░    ░██░▓██▒  ▐▌██▒▒▓█  ▄ 
+░▒█░   ░██████▒▓█   ▓██▒ ▒██▒ ░ ░██████▒░██░▒██░   ▓██░░▒████▒
+ ▒ ░   ░ ▒░▓  ░▒▒   ▓▒█░ ▒ ░░   ░ ▒░▓  ░░▓  ░ ▒░   ▒ ▒ ░░ ▒░ ░
+ ░     ░ ░ ▒  ░ ▒   ▒▒ ░   ░    ░ ░ ▒  ░ ▒ ░░ ░░   ░ ▒░ ░ ░  ░
+ ░ ░     ░ ░    ░   ▒    ░        ░ ░    ▒ ░   ░   ░ ░    ░   
+           ░  ░     ░  ░            ░  ░ ░           ░    ░  ░
+\e[0m
+-----++++------A backup tool made by eljumanji------++++------'
+}
+
+while true; do
+  banner
+  LOG="$(cat "$DIR/backup_log" 2> /dev/null)"
+  if [[ -d "$DIR" ]]; then
+    echo "
+    Last backup was on "$LOG".
+    1. Backup home.
+    2. Backup Virtual machines.
+    3. Backup everything.
+    4. Exit
+    "
+    read -p "Choose --> "
+    case "$REPLY" in
+
+      1)    SELECTOR="BACKUP HOME"
+            confirm rsync_home
+          ;;
+      2)    SELECTOR="BACKUP VMS"
+            confirm rsync_vm
+          ;;
+      3)    SELECTOR="BACKUP EVERYTHING"
+            confirm rsync_all
+          ;;
+      4)    clear && break
+          ;;
+      *)    echo "Invalid entry." >&2
+            sleep 1
+            clear
+          ;;
+    esac
+  else
+    echo "
+  Flatline Dix isn't hooked at the proper port, please verify"
+    break
+  fi
+done
