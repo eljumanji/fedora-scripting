@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# Function to show progress bar
+progress_bar() {
+    local current=$1
+    local total=$2
+    local bar_length=50 # Length of the progress bar
+    local progress=$((current * bar_length / total))
+    local remaining=$((bar_length - progress))
+
+    # Create the bar with filled and empty parts
+    local filled=$(printf "%${progress}s" | tr ' ' '#')
+    local empty=$(printf "%${remaining}s" | tr ' ' '-')
+
+    # Print the progress bar
+    printf "\r[${filled}${empty}] ${current}/${total} Songs downloaded"
+}
+
+# ytdlp download function
+limewire()
+{
+  yt-dlp -x --audio-format best -o "%(playlist_index)s. %(title)s.%(ext)s" --embed-metadata --parse-metadata "playlist_index:%(track_number)s" --playlist-items $i $LIN &>/dev/null
+}
+
+napster()
+{
+  yt-dlp -x --audio-format best -o "%(title)s.%(ext)s" --embed-thumbnail --embed-metadata -q --progress $LIN 2>/dev/null
+}
+
+# Function to detect if the URL is a single video or playlist
+read_url() {
+  url="$1"
+
+  # Get the playlist count using yt-dlp
+  playlist_count=$(yt-dlp --flat-playlist --get-title "$url" 2>/dev/null | wc -l)
+
+  if [ "$playlist_count" -gt 1 ]; then
+      is_playlist="true"
+  else
+      is_playlist="false"
+  fi
+  
+  echo $is_playlist
+}
+
+# Create directory based on playlist metadata
+make_directory()
+{
+  # Parsing Youtube API json 
+  ARTIST="$(yt-dlp -j --playlist-items 1 $LIN 2> /dev/null | jq -r '.artist' | sed -n '1p' | clean_string)"
+  ALBUM="$(yt-dlp --flat-playlist --dump-single-json $LIN 2> /dev/null | jq -r .title | sed s/"Album - "// | clean_string)"
+
+  # Change directory to music mount and create folder based on parsed data
+  cd ~/Music/unsorted
+  if [[ -d "$ARTIST - $ALBUM" ]]; then
+    cd "$ARTIST - $ALBUM"
+  else
+    mkdir "$ARTIST - $ALBUM"
+    cd "$ARTIST - $ALBUM"
+  fi
+}
+
+# Small function to remove spaces and capital letters from filenames and directories.
+clean_string()
+{
+  sed s/" "/./g | tr 'A-Z' 'a-z'
+}
+
+# Main script block
+if [[ -n "$1" ]]; then # Verify link was loaded as argument, or ask for it manually
+  LIN=$1
+else 
+  echo -n "Please enter URL: "
+  read LIN
+fi
+
+URL_PROBE="$(read_url "$LIN")"
+
+if [[ $URL_PROBE  == true ]]; then 
+  make_directory
+
+  # Variable to read playlist length and use it in the progress bar
+  STEPS="$(yt-dlp --flat-playlist --dump-single-json $LIN 2> /dev/null | jq '.playlist_count')"
+
+  # Loop that iterates over every playlist song, and shows progress.
+  for ((i = 1; i <= STEPS; i++)); do
+      limewire
+      progress_bar $i $STEPS
+  done
+
+else
+  cd ~/Music/unsorted
+  napster
+fi
+
+echo -e "\nDownload complete!"
+cd
