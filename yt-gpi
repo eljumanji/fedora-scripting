@@ -1,0 +1,139 @@
+#!/bin/bash
+
+DELAY=2
+MSG="Download in progress..."
+DIR=$(cat ~/bin/path) # Last stored directory file
+
+banner()
+{
+echo '
+    __        __                __                    __                __         
+   / /_____  / /______ _   ____/ /___ _      ______  / /___  ____ _____/ /__  _____
+  / //_/ _ \/ //_/ __ `/  / __  / __ \ | /| / / __ \/ / __ \/ __ `/ __  / _ \/ ___/
+ / ,< /  __/ ,< / /_/ /  / /_/ / /_/ / |/ |/ / / / / / /_/ / /_/ / /_/ /  __/ /    
+/_/|_|\___/_/|_|\__,_/   \__,_/\____/|__/|__/_/ /_/_/\____/\__,_/\__,_/\___/_/     
+'
+}
+
+another_one()
+{
+  echo -n "
+  1. Download another one.
+  2. Exit ↵
+  "
+  echo ""
+  read -p "Enter selection [0-2] --> "
+
+  if [[ "$REPLY" == 1 ]]; then
+    echo -n "Enter new link --> "
+    read LIN
+  else
+   cowsay "One day you're gonna have to answer for your sins" && exit 1
+  fi
+}
+
+routine()
+{
+  echo "Done!"
+  sleep "$DELAY"
+  another_one
+  continue
+}
+
+banner
+if [[ -n "$1" ]]; then
+  LIN=$1
+else
+  echo -n "Please enter URL to download: "
+  read LIN
+fi
+
+while true; do
+    clear
+  banner
+  TITLE="$(wget -qO- $LIN | grep -o "<title>[^<]*" | sed -e 's/<[^>]*>//g')"
+  if [[ -z "$TITLE" ]]; then
+    PLIN="$LIN"
+  else 
+    PLIN="$TITLE"
+  fi
+
+  cat <<-_EOF_
+    Welcome, "$USER", please pick an option:
+    Current URL is "$PLIN"
+    
+    1. Download as MP4.
+    2. Download as MP3.
+    3. Download as WEBM.
+    4. Change download directory, currently: "$DIR".
+    5. Change URL.
+    0. Exit ↵ 
+
+_EOF_
+  read -p "Enter selection [0-5] --> "
+  
+  if [[ "$REPLY" =~ ^[0-5]$ ]]; then
+    if [[ "$REPLY" == 1 ]]; then
+      echo "$MSG"
+      yt-dlp -S res,ext:mp4:m4a --recode mp4 -P "$DIR" "$LIN" 1> /dev/null  
+      routine
+    fi
+
+    if [[ "$REPLY" == 2 ]]; then
+      echo "$MSG"
+      yt-dlp -x --audio-format mp3 --embed-thumbnail --embed-metadata -P "$DIR" "$LIN" 1> /dev/null
+      routine
+    fi
+
+    if [[ "$REPLY" == 3 ]]; then
+      echo "$MSG"
+      yt-dlp -P "$DIR" "$LIN" 1> /dev/null
+      routine
+    fi
+
+    if [[ "$REPLY" == 4 ]]; then
+      echo -n "Change directory 🗁 
+      1. important_stuff
+      2. Music
+      3. Other
+      "
+      
+      read -p "Take a Pick --> "
+      if [[ "$REPLY" =~ ^[0-3]$ ]]; then
+        if [[ "$REPLY" == 1 ]]; then
+          echo "~/ambergris/important_stuff" > ~/bin/path
+        fi
+
+        if [[ "$REPLY" == 2 ]]; then
+          echo "~/Music" > ~/bin/path
+        fi
+
+        if [[ "$REPLY" == 3 ]]; then
+          echo -n "Enter manual directory: "
+          read MANUAL
+          echo $MANUAL > ~/bin/path
+        fi
+
+      else
+        echo "Invalid entry." >&2
+        sleep "$DELAY"
+      fi
+
+      continue
+    fi
+
+    if [[ "$REPLY" == 5 ]]; then
+      echo -n "Change URL --> "
+      read LIN
+      continue
+    fi
+
+    if [[ "$REPLY" == 0 ]]; then
+      break
+    fi
+  else
+    echo "Invalid entry." >&2
+    sleep "$DELAY"
+  fi
+done
+cowsay "One day you're gonna have to answer for your sins"
