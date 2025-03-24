@@ -1,8 +1,17 @@
 #!/bin/bash
 
+# Configuration file to store the file path
+config_file="$HOME/bin/.gpi_config"
+
+# Check if the config file exists and read the file path
+if [ -f "$config_file" ]; then
+    DIR=$(cat "$config_file")
+else
+    # If the config file doesn't exist, default to home directory
+    DIR="$HOME/"
+fi
 DELAY=2
 MSG="Download in progress..."
-DIR=$(cat ~/bin/path) # Last stored directory file
 
 banner()
 {
@@ -101,17 +110,17 @@ _EOF_
       read -p "Take a Pick --> "
       if [[ "$REPLY" =~ ^[0-3]$ ]]; then
         if [[ "$REPLY" == 1 ]]; then
-          echo "~/ambergris/important_stuff" > ~/bin/path
+          echo "~/ambergris/important_stuff" > "$config_file"
         fi
 
         if [[ "$REPLY" == 2 ]]; then
-          echo "~/Music" > ~/bin/path
+          echo "~/Music" > "$config_file"
         fi
 
         if [[ "$REPLY" == 3 ]]; then
           echo -n "Enter manual directory: "
           read MANUAL
-          echo $MANUAL > ~/bin/path
+          echo $MANUAL > "$config_file"
         fi
 
       else
@@ -119,6 +128,7 @@ _EOF_
         sleep "$DELAY"
       fi
 
+      DIR=$(cat "$config_file")
       continue
     fi
 
