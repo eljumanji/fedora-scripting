@@ -25,6 +25,7 @@ PACKAGES=(
   "nmap"
   "adw-gtk3-theme"
   "rsms-inter-fonts"
+  "alacritty"
 )
 
 # Base GNOME extensions
@@ -63,7 +64,6 @@ FLATPAKS=(
   "md.obsidian.Obsidian"
   "net.ankiweb.Anki"
   "org.localsend.localsend_app"
-  "io.missioncenter.MissionCenter"
   "io.github.flattool.Warehouse"
   "io.bassi.Amberol"
   "org.gtk.Gtk3theme.adw-gtk3"
@@ -107,11 +107,12 @@ base_install() {
   # Install codecs and ffmpegthumbnailer
   echo "Installing codecs..."
   sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
-  sudo dnf config-manager setopt fedora-cisco-openh264
+  sudo dnf config-manager setopt fedora-cisco-openh264.enabled=1
   sudo dnf swap ffmpeg-free ffmpeg --allowerasing
-  sudo dnf update @multimedia --setop="install_weak_deps=False" --exclude=PackageKit-gstreamer-plugin
+  sudo dnf update @multimedia --setopt="install_weak_deps=False" --exclude=PackageKit-gstreamer-plugin
+  sudo dnf install libva-intel-driver
   sudo dnf group install Multimedia
-  sudo dnf install -y ffmpegthumbnailer 
+  sudo dnf install -y ffmpegthumbnailer cmus
 
   # Install KVM and virt manager
   echo "Installing KVM virtualization..."
@@ -121,6 +122,11 @@ base_install() {
   sudo usermod -a -G libvirt $(whoami)
   sudo usermod -a -G kvm $(whoami)
   
+  # Install brave browser
+  sudo dnf install dnf-plugins-core
+  sudo dnf config-manager addrepo --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+  sudo dnf install -y brave-browser
+
   # Base fedora tweaks
   tweaks
 }
@@ -152,8 +158,14 @@ tweaks() {
   # Install zellij
   wget https://github.com/zellij-org/zellij/releases/latest/download/zellij-x86_64-unknown-linux-musl.tar.gz
   tar xvf zellij-x86_64-unknown-linux-musl.tar.gz
-  mv zellij ~/bin
+  sudo mv zellij /usr/local/bin
   rm zellij-x86_64-unknown-linux-musl.tar.gz
+  cp ~/bin/fedora_tweaks/config.kdl ~/.config/zellij
+
+  # Configure alacritty
+  mkdir -p ~/.config/alacritty/themes
+  git clone https://github.com/alacritty/alacritty-theme ~/.config/alacritty/themes
+  cp ~/bin/fedora_tweaks/alacritty.toml ~/.config/alacritty
 }
 
 gnome_works() {
